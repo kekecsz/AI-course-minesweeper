@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minesweeper</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        #game-title {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        #game-board-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #game-board {
+            display: grid;
+            gap: 2px;
+            grid-template-columns: repeat(10, 30px);
+            margin-bottom: 10px;
+        }
+
+        .cell {
+            width: 30px;
+            height: 30px;
+            border: 1px solid #ccc;
+            text-align: center;
+            font-size: 14px;
+            cursor: pointer;
+            user-select: none; /* Prevent text selection on double-click */
+        }
+
+        .revealed {
+            cursor: default;
+        }
+
+        .bomb {
+            background-color: #f00;
+            color: #fff;
+        }
+
+        .marked {
+            background-color: #0f0;
+            font-weight: bold;
+        }
+
+        #result {
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-title">Minesweeper</div>
+<div id="game-board-container">
+    <div id="game-board"></div>
+    <div id="result"></div>
+</div>
+
+<script>
+    const boardSize = 10;
+    const totalBombs = 15;
+    let bombLocations = [];
+    let gameBoard = [];
+    let revealedCount = 0;
+
+    function initializeBoard() {
+        // Create an empty game board
+        gameBoard = Array.from({ length: boardSize }, () => Array(boardSize).fill(0));
+
+        // Place bombs randomly on the board
+        for (let i = 0; i < totalBombs; i++) {
+            let row, col;
+            do {
+                row = Math.floor(Math.random() * boardSize);
+                col = Math.floor(Math.random() * boardSize);
+            } while (gameBoard[row][col] === "B");
+
+            gameBoard[row][col] = "B";
+            bombLocations.push({ row, col });
+        }
+
+        // Calculate numbers around bombs
+        for (let { row, col } of bombLocations) {
+            for (let i = -1; i <= 1; i++) {
+                for (let j = -1; j <= 1; j++) {
+                    const newRow = row + i;
+                    const newCol = col + j;
+
+                    if (newRow >= 0 && newRow < boardSize && newCol >= 0 && newCol < boardSize && gameBoard[newRow][newCol] !== "B") {
+                        gameBoard[newRow][newCol]++;
+                    }
+                }
+            }
+        }
+
+        revealedCount = 0;
+    }
+
+    function revealCell(row, col) {
+        const cell = document.getElementById(`cell-${row}-${col}`);
+        if (cell.classList.contains("revealed")) {
+            return; // Already revealed
+        }
+
+        cell.classList.add("revealed");
+        revealedCount++;
+
+        if (gameBoard[row][col] === "B") {
+            cell.classList.add("bomb");
+            endGame("You lost!");
+        } else {
+            cell.textContent = gameBoard[row][col];
+            if (gameBoard[row][col] === 0) {
+                // Auto-reveal nearby cells if the current cell is empty
+                for (let i = -1; i <= 1; i++) {
+                    for (let j = -1; j <= 1; j++) {
+                        const newRow = row + i;
+                        const newCol = col + j;
+
+                        if (newRow >= 0 && newRow < boardSize && newCol >= 0 && newCol < boardSize) {
+                            const newCell = document.getElementById(`cell-${newRow}-${newCol}`);
+                            if (!newCell.classList.contains("revealed")) {
+                                revealCell(newRow, newCol);
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (revealedCount === boardSize * boardSize - totalBombs) {
+                endGame("You won!");
+            }
+        }
+    }
+
+    function markCell(row, col) {
+        const cell = document.getElementById(`cell-${row}-${col}`);
+        if (!cell.classList.contains("revealed")) {
+            cell.classList.toggle("marked");
+        }
+    }
+
+    function endGame(message) {
+        document.getElementById("result").textContent = message;
+        revealAllCells();
+    }
+
+    function revealAllCells() {
+        for (let row = 0; row < boardSize; row++) {
+            for (let col = 0; col < boardSize; col++) {
+                const cell = document.getElementById(`cell-${row}-${col}`);
+                cell.classList.add("revealed");
+
+                if (gameBoard[row][col] === "B") {
+                    cell.classList.add("bomb");
+                } else {
+                    cell.textContent = gameBoard[row][col];
+                }
+            }
+        }
+    }
+
+    function createGameBoard() {
+        const gameBoardElement = document.getElementById("game-board");
+
+        for (let row = 0; row < boardSize; row++) {
+            for (let col = 0; col < boardSize; col++) {
+                const cell = document.createElement("div");
+                cell.id = `cell-${row}-${col}`;
+                cell.className = "cell";
+                cell.addEventListener("click", (event) => {
+                    if (event.ctrlKey) {
+                        markCell(row, col);
+                    } else {
+                        revealCell(row, col);
+                    }
+                });
+                gameBoardElement.appendChild(cell);
+            }
+        }
+    }
+
+    function startGame() {
+        initializeBoard();
+        createGameBoard();
+    }
+
+    startGame();
+</script>
+
+</body>
+</html>
